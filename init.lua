@@ -901,7 +901,7 @@ require('lazy').setup({
     dependencies = { 'nvim-treesitter/nvim-treesitter-textobjects' },
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'python', 'latex' },
+      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'python' },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
@@ -980,11 +980,11 @@ require('lazy').setup({
   {
     'benlubas/molten-nvim',
     version = '^1.0.0', -- use version <2.0.0 to avoid breaking changes
-    dependencies = { '3rd/image.nvim' },
+    --dependencies = { '3rd/image.nvim' },
     build = ':UpdateRemotePlugins',
     init = function()
       -- these are examples, not defaults. Please see the readme
-      vim.g.molten_image_provider = 'image.nvim'
+      --vim.g.molten_image_provider = 'image.nvim'
       vim.g.molten_output_win_max_height = 20
 
       -- I find auto open annoying, keep in mind setting this option will require setting
@@ -993,7 +993,7 @@ require('lazy').setup({
 
       -- this guide will be using image.nvim
       -- Don't forget to setup and install the plugin if you want to view image outputs
-      vim.g.molten_image_provider = 'image.nvim'
+      --vim.g.molten_image_provider = 'image.nvim'
 
       -- optional, I like wrapping. works for virt text and the output window
       vim.g.molten_wrap_output = true
@@ -1161,59 +1161,59 @@ require('lazy').setup({
       })
     end,
   },
-  {
-    -- see the image.nvim readme for more information about configuring this plugin
-    '3rd/image.nvim',
-    config = function()
-      local image = require 'image'
-      image.setup {
-        backend = 'kitty', -- whatever backend you would like to use
-        integrations = {
-          markdown = {
-            enabled = true,
-            clear_in_insert_mode = false,
-            download_remote_images = true,
-            only_render_image_at_cursor = false,
-            filetypes = { 'markdown', 'vimwiki', 'ipynb', 'py', 'md' }, -- markdown extensions (ie. quarto) can go here
-          },
-          neorg = {
-            enabled = true,
-            clear_in_insert_mode = false,
-            download_remote_images = true,
-            only_render_image_at_cursor = false,
-            filetypes = { 'norg' },
-          },
-          html = {
-            enabled = false,
-          },
-          css = {
-            enabled = false,
-          },
-        },
-        max_width = nil,
-        max_height = nil,
-        max_width_window_percentage = nil,
-        max_height_window_percentage = 50,
-        window_overlap_clear_enabled = false, -- toggles images when windows are overlapped
-        window_overlap_clear_ft_ignore = { 'cmp_menu', 'cmp_docs', '' },
-        editor_only_render_when_focused = false, -- auto show/hide images when the editor gains/looses focus
-        tmux_show_only_in_active_window = false, -- auto show/hide images in the correct Tmux window (needs visual-activity off)
-        hijack_file_patterns = { '*.png', '*.jpg', '*.jpeg', '*.gif', '*.webp', '*.avif' }, -- render image files as images when opened
-
-        --        max_width = 100,
-        --        max_height = 12,
-        --        max_height_window_percentage = math.huge,
-        --        max_width_window_percentage = math.huge,
-        --        window_overlap_clear_enabled = true, -- toggles images when windows are overlapped
-        --        window_overlap_clear_ft_ignore = { 'cmp_menu', 'cmp_docs', '' },
-        --        kitty_method = 'normal',
-        --        rocks = {
-        --          hererocks = true,
-        --        },
-      }
-    end,
-    lazy = false,
-  },
+  --{
+  -- see the image.nvim readme for more information about configuring this plugin
+  --    '3rd/image.nvim',
+  --    config = function()
+  --      local image = require 'image'
+  --      image.setup {
+  --        backend = 'kitty', -- whatever backend you would like to use
+  --        integrations = {
+  --          markdown = {
+  --            enabled = true,
+  --            clear_in_insert_mode = false,
+  --            download_remote_images = true,
+  --            only_render_image_at_cursor = false,
+  --            filetypes = { 'markdown', 'vimwiki', 'ipynb', 'py', 'md' }, -- markdown extensions (ie. quarto) can go here
+  --          },
+  --          neorg = {
+  --            enabled = true,
+  --            clear_in_insert_mode = false,
+  --            download_remote_images = true,
+  --            only_render_image_at_cursor = false,
+  --            filetypes = { 'norg' },
+  --          },
+  --          html = {
+  --            enabled = false,
+  --          },
+  --          css = {
+  --            enabled = false,
+  --          },
+  --        },
+  --        max_width = nil,
+  --        max_height = nil,
+  --        max_width_window_percentage = nil,
+  --        max_height_window_percentage = 50,
+  --        window_overlap_clear_enabled = false, -- toggles images when windows are overlapped
+  --        window_overlap_clear_ft_ignore = { 'cmp_menu', 'cmp_docs', '' },
+  --        editor_only_render_when_focused = false, -- auto show/hide images when the editor gains/looses focus
+  --        tmux_show_only_in_active_window = false, -- auto show/hide images in the correct Tmux window (needs visual-activity off)
+  --        hijack_file_patterns = { '*.png', '*.jpg', '*.jpeg', '*.gif', '*.webp', '*.avif' }, -- render image files as images when opened
+  --
+  --        --        max_width = 100,
+  --        --        max_height = 12,
+  --        --        max_height_window_percentage = math.huge,
+  --        --        max_width_window_percentage = math.huge,
+  --        --        window_overlap_clear_enabled = true, -- toggles images when windows are overlapped
+  --        --        window_overlap_clear_ft_ignore = { 'cmp_menu', 'cmp_docs', '' },
+  --        --        kitty_method = 'normal',
+  --        --        rocks = {
+  --        --          hererocks = true,
+  --        --        },
+  --      }
+  --    end,
+  --    lazy = false,
+  --  },
   {
     -- dependency for molten
     'quarto-dev/quarto-nvim',
