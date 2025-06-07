@@ -842,12 +842,40 @@ require('lazy').setup({
     --'folke/tokyonight.nvim',
     'shaunsingh/nord.nvim',
     priority = 1000, -- Make sure to load this before all the other start plugins.
-    init = function()
-      -- Load the colorscheme here.
-      -- Like many other themes, this one has different styles, and you could load
-      -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-      --vim.cmd.colorscheme 'tokyonight-night'
+    --init = function()
+    -- Load the colorscheme here.
+    -- Like many other themes, this one has different styles, and you could load
+    -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
+    --vim.cmd.colorscheme 'tokyonight-night'
+    config = function()
+      vim.g.nord_contrast = true
+      vim.g.nord_borders = false
+
       vim.cmd.colorscheme 'nord'
+
+      -- Setup custom highlights
+      -- Define orange accent
+      local hl = vim.api.nvim_set_hl
+      local orange_func = '#D08770' -- For functions
+      local orange_str = '#FFA066' -- For strings
+
+      -- Function highlighting
+      hl(0, '@function', { fg = orange_func })
+      hl(0, '@function.call', { fg = orange_func })
+      hl(0, '@function.method', { fg = orange_func })
+
+      -- Strings
+      hl(0, '@string', { fg = orange_str })
+
+      -- misc
+      hl(0, 'CursorLineNr', { fg = orange_func, bold = true })
+      hl(0, 'Function', { fg = orange_func })
+      hl(0, 'Keyword', { fg = orange_func, italic = true })
+      hl(0, 'DiagnosticHint', { fg = orange_func })
+      hl(0, 'TelescopeBorder', { fg = orange_func })
+
+      hl(0, 'Comment', { fg = '#4C566A', italic = true })
+      hl(0, '@type', { fg = '#8FBCBB' }) -- or a grayish blue
 
       -- You can configure highlights by doing something like:
       vim.cmd.hi 'Comment gui=none'
@@ -980,99 +1008,78 @@ require('lazy').setup({
   {
     'benlubas/molten-nvim',
     version = '^1.0.0', -- use version <2.0.0 to avoid breaking changes
-    --dependencies = { '3rd/image.nvim' },
     build = ':UpdateRemotePlugins',
     init = function()
-      -- these are examples, not defaults. Please see the readme
-      --vim.g.molten_image_provider = 'image.nvim'
       vim.g.molten_output_win_max_height = 20
-
-      -- I find auto open annoying, keep in mind setting this option will require setting
-      -- a keybind for `:noautocmd MoltenEnterOutput` to open the output again
       vim.g.molten_auto_open_output = false
-
-      -- this guide will be using image.nvim
-      -- Don't forget to setup and install the plugin if you want to view image outputs
-      --vim.g.molten_image_provider = 'image.nvim'
-
-      -- optional, I like wrapping. works for virt text and the output window
       vim.g.molten_wrap_output = true
-
-      -- Output as virtual text. Allows outputs to always be shown, works with images, but can
-      -- be buggy with longer images
       vim.g.molten_virt_text_output = true
-
-      -- this will make it so the output shows up below the \`\`\` cell delimiter
       vim.g.molten_virt_lines_off_by_1 = true
 
+      -- Setup keybindings when Molten is ready
       vim.api.nvim_create_autocmd('User', {
         pattern = 'MoltenInitPost',
         callback = function()
-          -- quarto code runner mappings
           local r = require 'quarto.runner'
           vim.keymap.set('n', '<localleader>rc', r.run_cell, { desc = 'run cell', silent = true })
           vim.keymap.set('n', '<localleader>ra', r.run_above, { desc = 'run cell and above', silent = true })
           vim.keymap.set('n', '<localleader>rb', r.run_below, { desc = 'run cell and below', silent = true })
           vim.keymap.set('n', '<localleader>rl', r.run_line, { desc = 'run line', silent = true })
-          vim.keymap.set('n', '<localleader>rA', r.run_all, { desc = 'run all cells', silent = true })
-          vim.keymap.set('n', '<localleader>RA', function()
+          vim.keymap.set('n', '<localleader>rA', function()
             r.run_all(true)
           end, { desc = 'run all cells of all languages', silent = true })
-
-          -- setup some molten specific keybindings
-          vim.keymap.set('n', '<localleader>e', ':MoltenEvaluateOperator<CR>', { desc = 'evaluate operator', silent = true })
           vim.keymap.set('n', '<localleader>rr', ':MoltenReevaluateCell<CR>', { desc = 're-eval cell', silent = true })
           vim.keymap.set('v', '<localleader>r', ':<C-u>MoltenEvaluateVisual<CR>gv', { desc = 'execute visual selection', silent = true })
+          vim.keymap.set('n', '<localleader>e', ':MoltenEvaluateOperator<CR>', { desc = 'evaluate operator', silent = true })
           vim.keymap.set('n', '<localleader>os', ':noautocmd MoltenEnterOutput<CR>', { desc = 'open output window', silent = true })
           vim.keymap.set('n', '<localleader>oh', ':MoltenHideOutput<CR>', { desc = 'close output window', silent = true })
           vim.keymap.set('n', '<localleader>md', ':MoltenDelete<CR>', { desc = 'delete Molten cell', silent = true })
+
           local open = false
           vim.keymap.set('n', '<localleader>ot', function()
             open = not open
             vim.fn.MoltenUpdateOption('auto_open_output', open)
           end)
-
-          -- if we're in a python file, change the configuration a little
-          if vim.bo.filetype == 'python' then
-            vim.fn.MoltenUpdateOption('molten_virt_lines_off_by_1', false)
-            vim.fn.MoltenUpdateOption('molten_virt_text_output', false)
-          end
         end,
       })
 
-      -- change the configuration when editing a python file
+      -- Utility function to update output display options safely
+      local function set_molten_view_config(lines_off, virt_text)
+        local ok, status = pcall(require, 'molten.status')
+        if ok and type(status.initialized) == 'function' then
+          local init = status.initialized()
+          if init and init == 'Molten' then
+            vim.fn.MoltenUpdateOption('molten_virt_lines_off_by_1', lines_off)
+            vim.fn.MoltenUpdateOption('molten_virt_text_output', virt_text)
+          end
+        end
+      end
+
       vim.api.nvim_create_autocmd('BufEnter', {
         pattern = '*.py',
         callback = function(e)
-          if string.match(e.file, '.otter.') then
-            return
-          end
-          if require('molten.status').initialized() == 'Molten' then
-            vim.fn.MoltenUpdateOption('molten_virt_lines_off_by_1', false)
-            vim.fn.MoltenUpdateOption('molten_virt_text_output', false)
+          if not string.match(e.file, '.otter.') then
+            set_molten_view_config(false, false)
           end
         end,
       })
 
-      -- Undo those config changes when we go back to a markdown or quarto file
       vim.api.nvim_create_autocmd('BufEnter', {
         pattern = { '*.qmd', '*.md', '*.ipynb' },
         callback = function()
-          if require('molten.status').initialized() == 'Molten' then
-            vim.fn.MoltenUpdateOption('molten_virt_lines_off_by_1', true)
-            vim.fn.MoltenUpdateOption('molten_virt_text_output', true)
-          end
+          set_molten_view_config(true, true)
         end,
       })
 
-      local imb = function(e)
+      -- Autostart kernel and import outputs for Jupyter notebooks
+      local function imb(e)
         vim.schedule(function()
           local kernels = vim.fn.MoltenAvailableKernels()
-
           local try_kernel_name = function()
             local metadata = vim.json.decode(io.open(e.file, 'r'):read 'a')['metadata']
             return metadata.kernelspec.name
           end
+
           local ok, kernel_name = pcall(try_kernel_name)
 
           if not ok or not vim.tbl_contains(kernels, kernel_name) then
@@ -1086,16 +1093,16 @@ require('lazy').setup({
           if kernel_name ~= nil and vim.tbl_contains(kernels, kernel_name) then
             vim.cmd(('MoltenInit %s'):format(kernel_name))
           end
+
           vim.cmd 'MoltenImportOutput'
         end)
       end
-      -- automatically import output chunks from a jupyter notebook
+
       vim.api.nvim_create_autocmd('BufAdd', {
         pattern = { '*.ipynb' },
         callback = imb,
       })
 
-      -- we have to do this as well so that we catch files opened like nvim ./hi.ipynb
       vim.api.nvim_create_autocmd('BufEnter', {
         pattern = { '*.ipynb' },
         callback = function(e)
@@ -1105,41 +1112,39 @@ require('lazy').setup({
         end,
       })
 
-      -- Provide a command to create a blank new Python notebook
-      -- note: the metadata is needed for Jupytext to understand how to parse the notebook.
-      -- if you use another language than Python, you should change it in the template.
+      -- Command to create a blank Python notebook
       local default_notebook = [[
-          {
-            "cells": [
-             {
-              "cell_type": "markdown",
-              "metadata": {},
-              "source": [
-                ""
-              ]
-             }
-            ],
-            "metadata": {
-             "kernelspec": {
-              "display_name": "Python 3",
-              "language": "python",
-              "name": "python3"
-             },
-             "language_info": {
-              "codemirror_mode": {
-                "name": "ipython"
-              },
-              "file_extension": ".py",
-              "mimetype": "text/x-python",
-              "name": "python",
-              "nbconvert_exporter": "python",
-              "pygments_lexer": "ipython3"
-             }
-            },
-            "nbformat": 4,
-            "nbformat_minor": 5
-          }
-        ]]
+      {
+        "cells": [
+         {
+          "cell_type": "markdown",
+          "metadata": {},
+          "source": [
+            ""
+          ]
+         }
+        ],
+        "metadata": {
+         "kernelspec": {
+          "display_name": "Python 3",
+          "language": "python",
+          "name": "python3"
+         },
+         "language_info": {
+          "codemirror_mode": {
+            "name": "ipython"
+          },
+          "file_extension": ".py",
+          "mimetype": "text/x-python",
+          "name": "python",
+          "nbconvert_exporter": "python",
+          "pygments_lexer": "ipython3"
+         }
+        },
+        "nbformat": 4,
+        "nbformat_minor": 5
+      }
+    ]]
 
       local function new_notebook(filename)
         local path = filename .. '.ipynb'
@@ -1161,59 +1166,252 @@ require('lazy').setup({
       })
     end,
   },
-  --{
-  -- see the image.nvim readme for more information about configuring this plugin
-  --    '3rd/image.nvim',
-  --    config = function()
-  --      local image = require 'image'
-  --      image.setup {
-  --        backend = 'kitty', -- whatever backend you would like to use
-  --        integrations = {
-  --          markdown = {
-  --            enabled = true,
-  --            clear_in_insert_mode = false,
-  --            download_remote_images = true,
-  --            only_render_image_at_cursor = false,
-  --            filetypes = { 'markdown', 'vimwiki', 'ipynb', 'py', 'md' }, -- markdown extensions (ie. quarto) can go here
-  --          },
-  --          neorg = {
-  --            enabled = true,
-  --            clear_in_insert_mode = false,
-  --            download_remote_images = true,
-  --            only_render_image_at_cursor = false,
-  --            filetypes = { 'norg' },
-  --          },
-  --          html = {
-  --            enabled = false,
-  --          },
-  --          css = {
-  --            enabled = false,
-  --          },
-  --        },
-  --        max_width = nil,
-  --        max_height = nil,
-  --        max_width_window_percentage = nil,
-  --        max_height_window_percentage = 50,
-  --        window_overlap_clear_enabled = false, -- toggles images when windows are overlapped
-  --        window_overlap_clear_ft_ignore = { 'cmp_menu', 'cmp_docs', '' },
-  --        editor_only_render_when_focused = false, -- auto show/hide images when the editor gains/looses focus
-  --        tmux_show_only_in_active_window = false, -- auto show/hide images in the correct Tmux window (needs visual-activity off)
-  --        hijack_file_patterns = { '*.png', '*.jpg', '*.jpeg', '*.gif', '*.webp', '*.avif' }, -- render image files as images when opened
+
+  --  {
+  --    'benlubas/molten-nvim',
+  --    version = '^1.0.0', -- use version <2.0.0 to avoid breaking changes
+  --    --dependencies = { '3rd/image.nvim' },
+  --    build = ':UpdateRemotePlugins',
+  --    init = function()
+  --      -- these are examples, not defaults. Please see the readme
+  --      --vim.g.molten_image_provider = 'image.nvim'
+  --      vim.g.molten_output_win_max_height = 20
   --
-  --        --        max_width = 100,
-  --        --        max_height = 12,
-  --        --        max_height_window_percentage = math.huge,
-  --        --        max_width_window_percentage = math.huge,
-  --        --        window_overlap_clear_enabled = true, -- toggles images when windows are overlapped
-  --        --        window_overlap_clear_ft_ignore = { 'cmp_menu', 'cmp_docs', '' },
-  --        --        kitty_method = 'normal',
-  --        --        rocks = {
-  --        --          hererocks = true,
-  --        --        },
-  --      }
+  --      -- I find auto open annoying, keep in mind setting this option will require setting
+  --      -- a keybind for `:noautocmd MoltenEnterOutput` to open the output again
+  --      vim.g.molten_auto_open_output = false
+  --
+  --      -- this guide will be using image.nvim
+  --      -- Don't forget to setup and install the plugin if you want to view image outputs
+  --      --vim.g.molten_image_provider = 'image.nvim'
+  --
+  --      -- optional, I like wrapping. works for virt text and the output window
+  --      vim.g.molten_wrap_output = true
+  --
+  --      -- Output as virtual text. Allows outputs to always be shown, works with images, but can
+  --      -- be buggy with longer images
+  --      vim.g.molten_virt_text_output = true
+  --
+  --      -- this will make it so the output shows up below the \`\`\` cell delimiter
+  --      vim.g.molten_virt_lines_off_by_1 = true
+  --
+  --      vim.api.nvim_create_autocmd('User', {
+  --        pattern = 'MoltenInitPost',
+  --        callback = function()
+  --          -- quarto code runner mappings
+  --          local r = require 'quarto.runner'
+  --          vim.keymap.set('n', '<localleader>rc', r.run_cell, { desc = 'run cell', silent = true })
+  --          vim.keymap.set('n', '<localleader>ra', r.run_above, { desc = 'run cell and above', silent = true })
+  --          vim.keymap.set('n', '<localleader>rb', r.run_below, { desc = 'run cell and below', silent = true })
+  --          vim.keymap.set('n', '<localleader>rl', r.run_line, { desc = 'run line', silent = true })
+  --          vim.keymap.set('n', '<localleader>rA', r.run_all, { desc = 'run all cells', silent = true })
+  --          vim.keymap.set('n', '<localleader>RA', function()
+  --            r.run_all(true)
+  --          end, { desc = 'run all cells of all languages', silent = true })
+  --
+  --          -- setup some molten specific keybindings
+  --          vim.keymap.set('n', '<localleader>e', ':MoltenEvaluateOperator<CR>', { desc = 'evaluate operator', silent = true })
+  --          vim.keymap.set('n', '<localleader>rr', ':MoltenReevaluateCell<CR>', { desc = 're-eval cell', silent = true })
+  --          vim.keymap.set('v', '<localleader>r', ':<C-u>MoltenEvaluateVisual<CR>gv', { desc = 'execute visual selection', silent = true })
+  --          vim.keymap.set('n', '<localleader>os', ':noautocmd MoltenEnterOutput<CR>', { desc = 'open output window', silent = true })
+  --          vim.keymap.set('n', '<localleader>oh', ':MoltenHideOutput<CR>', { desc = 'close output window', silent = true })
+  --          vim.keymap.set('n', '<localleader>md', ':MoltenDelete<CR>', { desc = 'delete Molten cell', silent = true })
+  --          local open = false
+  --          vim.keymap.set('n', '<localleader>ot', function()
+  --            open = not open
+  --            vim.fn.MoltenUpdateOption('auto_open_output', open)
+  --          end)
+  --
+  --          -- if we're in a python file, change the configuration a little
+  --          if vim.bo.filetype == 'python' then
+  --            vim.fn.MoltenUpdateOption('molten_virt_lines_off_by_1', false)
+  --            vim.fn.MoltenUpdateOption('molten_virt_text_output', false)
+  --          end
+  --        end,
+  --      })
+  --
+  --      -- change the configuration when editing a python file
+  --      vim.api.nvim_create_autocmd('BufEnter', {
+  --        pattern = '*.py',
+  --        callback = function(e)
+  --          if string.match(e.file, '.otter.') then
+  --            return
+  --          end
+  --          local ok, status = pcall(require, 'molten.status')
+  --          if ok and type(status.initialized) == 'function' and status.initialized() == 'molten' then
+  --            -- safe to use molten status features here
+  --            if require('molten.status').initialized() == 'Molten' then
+  --              vim.fn.MoltenUpdateOption('molten_virt_lines_off_by_1', false)
+  --              vim.fn.MoltenUpdateOption('molten_virt_text_output', false)
+  --            end
+  --          end
+  --        end,
+  --      })
+  --
+  --      -- Undo those config changes when we go back to a markdown or quarto file
+  --      vim.api.nvim_create_autocmd('BufEnter', {
+  --        pattern = { '*.qmd', '*.md', '*.ipynb' },
+  --        callback = function()
+  --          local ok, status = pcall(require, 'molten.status')
+  --          if ok and type(status.initialized) == 'function' and status.initialized() == 'molten' then
+  --            -- safe to use molten status features here
+  --            if require('molten.status').initialized() == 'Molten' then
+  --              vim.fn.MoltenUpdateOption('molten_virt_lines_off_by_1', true)
+  --              vim.fn.MoltenUpdateOption('molten_virt_text_output', true)
+  --            end
+  --          end
+  --        end,
+  --      })
+  --
+  --      local imb = function(e)
+  --        vim.schedule(function()
+  --          local kernels = vim.fn.MoltenAvailableKernels()
+  --
+  --          local try_kernel_name = function()
+  --            local metadata = vim.json.decode(io.open(e.file, 'r'):read 'a')['metadata']
+  --            return metadata.kernelspec.name
+  --          end
+  --          local ok, kernel_name = pcall(try_kernel_name)
+  --
+  --          if not ok or not vim.tbl_contains(kernels, kernel_name) then
+  --            kernel_name = nil
+  --            local venv = os.getenv 'VIRTUAL_ENV'
+  --            if venv ~= nil then
+  --              kernel_name = string.match(venv, '/.+/(.+)')
+  --            end
+  --          end
+  --
+  --          if kernel_name ~= nil and vim.tbl_contains(kernels, kernel_name) then
+  --            vim.cmd(('MoltenInit %s'):format(kernel_name))
+  --          end
+  --          vim.cmd 'MoltenImportOutput'
+  --        end)
+  --      end
+  --      -- automatically import output chunks from a jupyter notebook
+  --      vim.api.nvim_create_autocmd('BufAdd', {
+  --        pattern = { '*.ipynb' },
+  --        callback = imb,
+  --      })
+  --
+  --      -- we have to do this as well so that we catch files opened like nvim ./hi.ipynb
+  --      vim.api.nvim_create_autocmd('BufEnter', {
+  --        pattern = { '*.ipynb' },
+  --        callback = function(e)
+  --          if vim.api.nvim_get_vvar 'vim_did_enter' ~= 1 then
+  --            imb(e)
+  --          end
+  --        end,
+  --      })
+  --
+  --      -- Provide a command to create a blank new Python notebook
+  --      -- note: the metadata is needed for Jupytext to understand how to parse the notebook.
+  --      -- if you use another language than Python, you should change it in the template.
+  --      local default_notebook = [[
+  --          {
+  --            "cells": [
+  --             {
+  --              "cell_type": "markdown",
+  --              "metadata": {},
+  --              "source": [
+  --                ""
+  --              ]
+  --             }
+  --            ],
+  --            "metadata": {
+  --             "kernelspec": {
+  --              "display_name": "Python 3",
+  --              "language": "python",
+  --              "name": "python3"
+  --             },
+  --             "language_info": {
+  --              "codemirror_mode": {
+  --                "name": "ipython"
+  --              },
+  --              "file_extension": ".py",
+  --              "mimetype": "text/x-python",
+  --              "name": "python",
+  --              "nbconvert_exporter": "python",
+  --              "pygments_lexer": "ipython3"
+  --             }
+  --            },
+  --            "nbformat": 4,
+  --            "nbformat_minor": 5
+  --          }
+  --        ]]
+  --
+  --      local function new_notebook(filename)
+  --        local path = filename .. '.ipynb'
+  --        local file = io.open(path, 'w')
+  --        if file then
+  --          file:write(default_notebook)
+  --          file:close()
+  --          vim.cmd('edit ' .. path)
+  --        else
+  --          print 'Error: Could not open new notebook file for writing.'
+  --        end
+  --      end
+  --
+  --      vim.api.nvim_create_user_command('NewNotebook', function(opts)
+  --        new_notebook(opts.args)
+  --      end, {
+  --        nargs = 1,
+  --        complete = 'file',
+  --      })
   --    end,
-  --    lazy = false,
   --  },
+  --  --{
+  --  -- see the image.nvim readme for more information about configuring this plugin
+  --  --    '3rd/image.nvim',
+  --  --    config = function()
+  --  --      local image = require 'image'
+  --  --      image.setup {
+  --  --        backend = 'kitty', -- whatever backend you would like to use
+  --  --        integrations = {
+  --  --          markdown = {
+  --  --            enabled = true,
+  --  --            clear_in_insert_mode = false,
+  --  --            download_remote_images = true,
+  --  --            only_render_image_at_cursor = false,
+  --  --            filetypes = { 'markdown', 'vimwiki', 'ipynb', 'py', 'md' }, -- markdown extensions (ie. quarto) can go here
+  --  --          },
+  --  --          neorg = {
+  --  --            enabled = true,
+  --  --            clear_in_insert_mode = false,
+  --  --            download_remote_images = true,
+  --  --            only_render_image_at_cursor = false,
+  --  --            filetypes = { 'norg' },
+  --  --          },
+  --  --          html = {
+  --  --            enabled = false,
+  --  --          },
+  --  --          css = {
+  --  --            enabled = false,
+  --  --          },
+  --  --        },
+  --  --        max_width = nil,
+  --  --        max_height = nil,
+  --  --        max_width_window_percentage = nil,
+  --  --        max_height_window_percentage = 50,
+  --  --        window_overlap_clear_enabled = false, -- toggles images when windows are overlapped
+  --  --        window_overlap_clear_ft_ignore = { 'cmp_menu', 'cmp_docs', '' },
+  --  --        editor_only_render_when_focused = false, -- auto show/hide images when the editor gains/looses focus
+  --  --        tmux_show_only_in_active_window = false, -- auto show/hide images in the correct Tmux window (needs visual-activity off)
+  --  --        hijack_file_patterns = { '*.png', '*.jpg', '*.jpeg', '*.gif', '*.webp', '*.avif' }, -- render image files as images when opened
+  --  --
+  --  --        --        max_width = 100,
+  --  --        --        max_height = 12,
+  --  --        --        max_height_window_percentage = math.huge,
+  --  --        --        max_width_window_percentage = math.huge,
+  --  --        --        window_overlap_clear_enabled = true, -- toggles images when windows are overlapped
+  --  --        --        window_overlap_clear_ft_ignore = { 'cmp_menu', 'cmp_docs', '' },
+  --  --        --        kitty_method = 'normal',
+  --  --        --        rocks = {
+  --  --        --          hererocks = true,
+  --  --        --        },
+  --  --      }
+  --  --    end,
+  --  --    lazy = false,
+  --  --  },
   {
     -- dependency for molten
     'quarto-dev/quarto-nvim',
