@@ -861,8 +861,8 @@ require('lazy').setup({
 
       -- Function highlighting
       hl(0, '@function', { fg = orange_func })
-      hl(0, '@function.call', { fg = orange_func })
-      hl(0, '@function.method', { fg = orange_func })
+      --hl(0, '@function.call', { fg = orange_func })
+      --hl(0, '@function.method', { fg = orange_func })
 
       -- Strings
       hl(0, '@string', { fg = orange_str })
